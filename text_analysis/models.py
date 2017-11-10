@@ -35,7 +35,6 @@ class CNN_module():
         doc_input = Input(shape=(max_len,), dtype='int32', name='doc_input')
 
         '''Embedding Layer'''
-        self.model.add_input(name='input', input_shape=(max_len,), dtype=int)
 
         if init_W is None:
             # self.model.add_node(Embedding(
@@ -55,12 +54,13 @@ class CNN_module():
             model_internal = Sequential()
             # model_internal.add(Convolution2D(
             #     nb_filters, i, emb_dim, activation="relu"))
-            model_internal.add(Conv2D(nb_filters, (i, emb_dim), activation="relu", name='conv2d_' + str(i), input_shape=(self.max_len, emb_dim, 1)))
+            model_internal.add(Conv2D(nb_filters, (i, emb_dim), activation="relu",
+                               name='conv2d_' + str(i), input_shape=(self.max_len, emb_dim, 1)))
             # model_internal.add(MaxPooling2D(
             #     pool_size=(self.max_len - i + 1, 1)))
             model_internal.add(MaxPooling2D(pool_size=(self.max_len - i + 1, 1), name='maxpool2d_' + str(i)))
             model_internal.add(Flatten())
-            model_internal.add(reshape)
+            flatten = model_internal(reshape)
             flatten_.append(flatten)
 
         '''Fully Connect Layer & Dropout Layer'''
