@@ -7,11 +7,10 @@ import numpy as np
 np.random.seed(1337)
 
 from keras.callbacks import EarlyStopping
-from keras.layers.containers import Sequential
-from keras.layers.convolutional import Convolution2D, MaxPooling2D
-from keras.layers.core import Reshape, Flatten, Dropout, Dense
-from keras.layers.embeddings import Embedding
-from keras.models import Graph
+from keras.layers.convolutional import Conv2D, MaxPooling2D
+from keras.layers.core import Reshape, Flatten, Dropout
+from keras.layers import Input, Embedding, Dense
+from keras.models import Model, Sequential
 from keras.preprocessing import sequence
 
 
@@ -31,44 +30,57 @@ class CNN_module():
         projection_dimension = output_dimesion
 
         filter_lengths = [3, 4, 5]
-        self.model = Graph()
+        # self.model = Graph()
+        # input
+        doc_input = Input(shape=(max_len,), dtype='int32', name='doc_input')
 
         '''Embedding Layer'''
         self.model.add_input(name='input', input_shape=(max_len,), dtype=int)
 
         if init_W is None:
-            self.model.add_node(Embedding(
-                max_features, emb_dim, input_length=max_len), name='sentence_embeddings', input='input')
+            # self.model.add_node(Embedding(
+            #     max_features, emb_dim, input_length=max_len), name='sentence_embeddings', input='input')
+            sentence_embeddings = Embedding(output_dim=emb_dim, input_dim=max_features, input_length=max_len, name='sentence_embeddings')(doc_input)
         else:
-            self.model.add_node(Embedding(max_features, emb_dim, input_length=max_len, weights=[
-                                init_W / 20]), name='sentence_embeddings', input='input')
+            # self.model.add_node(Embedding(max_features, emb_dim, input_length=max_len, weights=[
+            #                     init_W / 20]), name='sentence_embeddings', input='input')
+            sentence_embeddings = Embedding(output_dim=emb_dim, input_dim=max_features, input_length=max_len, weights=[init_W / 20], name='sentence_embeddings')(doc_input)
+
+        '''Reshape Layer'''
+        reshape = Reshape(target_shape=(max_len, emb_dim, 1), name='reshape')(sentence_embeddings) # chanels last
 
         '''Convolution Layer & Max Pooling Layer'''
+        flatten_ = []
         for i in filter_lengths:
             model_internal = Sequential()
-            model_internal.add(
-                Reshape(dims=(1, self.max_len, emb_dim), input_shape=(self.max_len, emb_dim)))
-            model_internal.add(Convolution2D(
-                nb_filters, i, emb_dim, activation="relu"))
-            model_internal.add(MaxPooling2D(
-                pool_size=(self.max_len - i + 1, 1)))
+            # model_internal.add(Convolution2D(
+            #     nb_filters, i, emb_dim, activation="relu"))
+            model_internal.add(Conv2D(nb_filters, (i, emb_dim), activation="relu", name='conv2d_' + str(i), input_shape=(self.max_len, emb_dim, 1)))
+            # model_internal.add(MaxPooling2D(
+            #     pool_size=(self.max_len - i + 1, 1)))
+            model_internal.add(MaxPooling2D(pool_size=(self.max_len - i + 1, 1), name='maxpool2d_' + str(i)))
             model_internal.add(Flatten())
+            model_internal.add(reshape)
+            flatten_.append(flatten)
 
-            self.model.add_node(model_internal, name='unit_' +
-                                str(i), input='sentence_embeddings')
+        '''Fully Connect Layer & Dropout Layer'''
+        # self.model.add_node(Dense(vanila_dimension, activation='tanh'),
+        #                     name='fully_connect', inputs=['unit_' + str(i) for i in filter_lengths])
+        fully_connect = Dense(vanila_dimension, activation='tanh',
+                              name='fully_connect')(concatenate(flatten_, axis=-1))
 
-        '''Dropout Layer'''
-        self.model.add_node(Dense(vanila_dimension, activation='tanh'),
-                            name='fully_connect', inputs=['unit_' + str(i) for i in filter_lengths])
-        self.model.add_node(Dropout(dropout_rate),
-                            name='dropout', input='fully_connect')
+        # self.model.add_node(Dropout(dropout_rate),
+        #                     name='dropout', input='fully_connect')
+        dropout = Dropout(dropout_rate, name='dropout')(fully_connect)
         '''Projection Layer & Output Layer'''
-        self.model.add_node(Dense(projection_dimension, activation='tanh'),
-                            name='projection', input='dropout')
+        # self.model.add_node(Dense(projection_dimension, activation='tanh'),
+        #                     name='projection', input='dropout')
+        pj = Dense(projection_dimension, activation='tanh', name='output') # output layer
+        projection = pj(dropout)
 
         # Output Layer
-        self.model.add_output(name='output', input='projection')
-        self.model.compile('rmsprop', {'output': 'mse'})
+        model = Model(inputs=doc_input, outputs=projection)
+        model.compile(optimizer='rmsprop', loss='mse')
 
     def load_model(self, model_path):
         self.model.load_weights(model_path)
