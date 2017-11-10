@@ -78,7 +78,7 @@ class CNN_module():
         pj = Dense(projection_dimension, activation='tanh', name='output') # output layer
         projection = pj(dropout)
 
-        # Output Layer
+        # Output Layergit
         model = Model(inputs=doc_input, outputs=projection)
         model.compile(optimizer='rmsprop', loss='mse')
         self.model = model
@@ -133,8 +133,9 @@ class CNN_module():
         item_weight = np.random.permutation(item_weight)
 
         print("Train...CNN module")
-        history = self.model.fit({'input': X_train, 'output': V},
-                                 verbose=0, batch_size=self.batch_size, nb_epoch=self.nb_epoch, sample_weight={'output': item_weight})
+        history = self.model.fit(X_train,V},
+                                 verbose=0, batch_size=self.batch_size, nb_epoch=self.nb_epoch, 
+                                 sample_weight={'output': item_weight})
 
         # cnn_loss_his = history.history['loss']
         # cmp_cnn_loss = sorted(cnn_loss_his)[::-1]
@@ -145,5 +146,5 @@ class CNN_module():
     def get_projection_layer(self, X_train):
         X_train = sequence.pad_sequences(X_train, maxlen=self.max_len)
         Y = self.model.predict(
-            {'input': X_train}, batch_size=len(X_train))['output']
+            {'input': X_train}, batch_size=len(X_train))
         return Y
