@@ -9,7 +9,7 @@ np.random.seed(1337)
 from keras.callbacks import EarlyStopping
 from keras.layers.convolutional import Conv2D, MaxPooling2D
 from keras.layers.core import Reshape, Flatten, Dropout
-from keras.layers import Input, Embedding, Dense ,Concatenate
+from keras.layers import Input, Embedding, Dense, concatenate
 from keras.models import Model, Sequential
 from keras.preprocessing import sequence
 
@@ -67,7 +67,7 @@ class CNN_module():
         # self.model.add_node(Dense(vanila_dimension, activation='tanh'),
         #                     name='fully_connect', inputs=['unit_' + str(i) for i in filter_lengths])
         fully_connect = Dense(vanila_dimension, activation='tanh',
-                              name='fully_connect')(Concatenate(flatten_, axis=-1))
+                              name='fully_connect')(concatenate(flatten_, axis=-1))
 
         # self.model.add_node(Dropout(dropout_rate),
         #                     name='dropout', input='fully_connect')
@@ -81,6 +81,7 @@ class CNN_module():
         # Output Layer
         model = Model(inputs=doc_input, outputs=projection)
         model.compile(optimizer='rmsprop', loss='mse')
+        self.model = model
 
     def load_model(self, model_path):
         self.model.load_weights(model_path)
